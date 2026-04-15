@@ -60,11 +60,11 @@ def eye_polygon(cx: float, cy: float, w: float, h: float, n: int = 64):
 
 def make_default(target: int) -> Image.Image:
     """
-    Dark navy background with two white eye symbols side-by-side (👀 style):
-      • Two filled white lens shapes
-      • Dark iris + white ring + dark pupil + highlight in each eye
+    Dark navy background with two tall eye symbols side-by-side:
+      • Two white lens shapes with a portrait (tall) aspect ratio
+      • Iris + white ring + pupil + highlight shifted down-left in each eye
     """
-    OVER = 4          # super-sampling factor for clean anti-aliasing
+    OVER = 4
     s = target * OVER
 
     img = Image.new("RGBA", (s, s), TRANSPARENT)
@@ -73,70 +73,64 @@ def make_default(target: int) -> Image.Image:
     # Background
     draw.rectangle([(0, 0), (s, s)], fill=BG_DEFAULT)
 
-    # ── Two-eye (👀) geometry ─────────────────────────────────────────────
-    pad = s * 0.08                       # outer horizontal padding
-    gap = s * 0.08                       # gap between the two eyes
-    ew  = (s - 2 * pad - gap) / 2       # width of each eye
-    eh  = ew * 1.20                      # taller than wide (portrait aspect)
-    cy  = s / 2                          # vertically centred
+    # ── Two-eye geometry ──────────────────────────────────────────────────
+    pad = s * 0.06                        # outer horizontal padding
+    gap = s * 0.10                        # gap between the two eyes
+    ew  = (s - 2 * pad - gap) / 2        # width of each eye
+    eh  = ew * 1.55                       # tall aspect ratio
+    cy  = s * 0.52                        # slightly below centre
 
-    lcx = pad + ew / 2                   # left eye centre x
-    rcx = s - pad - ew / 2              # right eye centre x
+    lcx = pad + ew / 2                    # left eye centre x
+    rcx = s - pad - ew / 2               # right eye centre x
 
-    # Iris shifts down inside the (centred) white lens — the white stays put,
-    # the dark iris/pupil moves to the bottom half to convey a downward gaze.
-    gaze_dy = eh * 0.30
+    # Gaze: down and to the left
+    gaze_dx = -ew * 0.14
+    gaze_dy =  eh * 0.22
 
-    def draw_eye(cx, cy):
-        # White lens — centred at (cx, cy), no offset
+    def draw_eye(cx):
+        # White sclera
         pts = eye_polygon(cx, cy, ew, eh, n=128)
         draw.polygon(pts, fill=WHITE)
 
-        # Iris centre shifted downward within the lens
-        icy = cy + gaze_dy -20
+        icx = cx + gaze_dx
+        icy = cy + gaze_dy
 
-        # Iris — dark navy circle
-        iris_r = eh * 0.44
+        # Iris
+        iris_r = eh * 0.28
         draw.ellipse(
-            [(cx - iris_r, icy - iris_r), (cx + iris_r, icy + iris_r)],
+            [(icx - iris_r, icy - iris_r), (icx + iris_r, icy + iris_r)],
             fill=BG_DEFAULT,
         )
 
-        # Inner iris ring — white ring to separate iris from eye white
-        ring_r = iris_r * 0.82
+        # White ring
+        ring_r = iris_r * 0.77
         draw.ellipse(
-            [(cx - ring_r, icy - ring_r), (cx + ring_r, icy + ring_r)],
+            [(icx - ring_r, icy - ring_r), (icx + ring_r, icy + ring_r)],
             fill=WHITE,
         )
 
-        # Pupil — dark filled circle
+        # Pupil
         pupil_r = ring_r * 0.58
-        iris_offset_x = 10
-        iris_offset_y = 5
         draw.ellipse(
-            [(cx - pupil_r - iris_offset_x, icy - pupil_r - iris_offset_y), (cx + pupil_r - 6, icy + pupil_r + 10)],
+            [(icx - pupil_r, icy - pupil_r), (icx + pupil_r, icy + pupil_r)],
             fill=BG_DEFAULT,
         )
 
-        # Highlight dot — small white circle offset up-right from pupil centre
-        hl_r  = pupil_r * 0.38
-        hl_ox = pupil_r * 0.001
-        hl_oy = pupil_r * 0.001
+        # Highlight
+        hl_r  = pupil_r * 0.30
+        hl_ox =  pupil_r * 0.28
+        hl_oy = -pupil_r * 0.28
         draw.ellipse(
-            [
-                (cx + hl_ox - hl_r - 10, icy - hl_oy - hl_r+4),
-                (cx + hl_ox + hl_r - 10 , icy - hl_oy + hl_r + 10),
-            ],
+            [(icx + hl_ox - hl_r, icy + hl_oy - hl_r),
+             (icx + hl_ox + hl_r, icy + hl_oy + hl_r)],
             fill=WHITE,
         )
 
-    draw_eye(lcx, cy)
-    draw_eye(rcx, cy)
+    draw_eye(lcx)
+    draw_eye(rcx)
 
     # ── Downscale with anti-aliasing ──────────────────────────────────────
     img = img.resize((target, target), Image.LANCZOS)
-
-    # Apply rounded-corner mask
     mask = rounded_rect_mask(target, radius=max(2, target // 5))
     img.putalpha(mask)
 
