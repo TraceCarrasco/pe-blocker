@@ -1,0 +1,238 @@
+{
+  "/PeBlockerStack/Suggestions": [
+    {
+      "type": "aws:cdk:hasPhysicalName",
+      "data": {
+        "Ref": "Suggestions2DCFD649"
+      }
+    }
+  ],
+  "/PeBlockerStack/MonthlyCostBudget": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MonthlyCostBudget"
+    }
+  ],
+  "/PeBlockerStack/MonthlyBudgetReset": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MonthlyBudgetReset"
+    }
+  ],
+  "/PeBlockerStack/WebAcl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebAcl"
+    }
+  ],
+  "/PeBlockerStack/ApiUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiUrl"
+    }
+  ],
+  "/PeBlockerStack/SuggestionsTableName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SuggestionsTableName"
+    }
+  ],
+  "/PeBlockerStack/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    }
+  ],
+  "/PeBlockerStack/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    }
+  ],
+  "/PeBlockerStack/Suggestions/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "Suggestions2DCFD649"
+    }
+  ],
+  "/PeBlockerStack/SubmissionsEnabled/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SubmissionsEnabledF46FF627"
+    }
+  ],
+  "/PeBlockerStack/SubmitSuggestion/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SubmitSuggestion6972A7EF"
+    }
+  ],
+  "/PeBlockerStack/BudgetEnforcer/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BudgetEnforcerD370D736"
+    }
+  ],
+  "/PeBlockerStack/BudgetEnforcer/AllowInvoke:PeBlockerStackBudgetAlertTopic4DF2F2CB": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BudgetEnforcerAllowInvokePeBlockerStackBudgetAlertTopic4DF2F2CBBC865F08"
+    }
+  ],
+  "/PeBlockerStack/BudgetResetter/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BudgetResetterC1BB6208"
+    }
+  ],
+  "/PeBlockerStack/BudgetAlertTopic/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BudgetAlertTopicF20DF526"
+    }
+  ],
+  "/PeBlockerStack/SchedulerRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SchedulerRole59E73443"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApi67B6A54E"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/Account": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApiAccount02EA73F0"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/Endpoint": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApiEndpoint4487CB78"
+    }
+  ],
+  "/PeBlockerStack/Distribution/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "Distribution830FAC52"
+    }
+  ],
+  "/PeBlockerStack/CDKMetadata/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CDKMetadata"
+    }
+  ],
+  "/PeBlockerStack/SubmitSuggestion/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SubmitSuggestionServiceRole71BA46CF"
+    }
+  ],
+  "/PeBlockerStack/BudgetEnforcer/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BudgetEnforcerServiceRole60831680"
+    }
+  ],
+  "/PeBlockerStack/BudgetEnforcer/BudgetAlertTopic/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BudgetEnforcerBudgetAlertTopicE5749453"
+    }
+  ],
+  "/PeBlockerStack/BudgetResetter/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BudgetResetterServiceRole6FF9F4F4"
+    }
+  ],
+  "/PeBlockerStack/BudgetAlertTopic/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BudgetAlertTopicPolicy3B1AEAD8"
+    }
+  ],
+  "/PeBlockerStack/SchedulerRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SchedulerRoleDefaultPolicy66F774B8"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/CloudWatchRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApiCloudWatchRoleB76C2C1F"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/Deployment/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApiDeployment1739BE63fa6e84ff969d5ca6367f861522c1af65"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/DeploymentStage.prod/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApiDeploymentStageprod954D3946"
+    }
+  ],
+  "/PeBlockerStack/SubmitSuggestion/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SubmitSuggestionServiceRoleDefaultPolicyE17443DB"
+    }
+  ],
+  "/PeBlockerStack/BudgetEnforcer/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BudgetEnforcerServiceRoleDefaultPolicy3924F396"
+    }
+  ],
+  "/PeBlockerStack/BudgetResetter/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BudgetResetterServiceRoleDefaultPolicy403ECC78"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/Default/OPTIONS/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApiOPTIONSB35963E0"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/Default/suggestions/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApisuggestionsE1229FA4"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/Default/suggestions/OPTIONS/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApisuggestionsOPTIONS5C357F30"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/Default/suggestions/POST/ApiPermission.PeBlockerStackPeBlockerApiD086A8AC.POST..suggestions": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApisuggestionsPOSTApiPermissionPeBlockerStackPeBlockerApiD086A8ACPOSTsuggestionsF43E3D2F"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/Default/suggestions/POST/ApiPermission.Test.PeBlockerStackPeBlockerApiD086A8AC.POST..suggestions": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApisuggestionsPOSTApiPermissionTestPeBlockerStackPeBlockerApiD086A8ACPOSTsuggestionsD0E7DA3D"
+    }
+  ],
+  "/PeBlockerStack/PeBlockerApi/Default/suggestions/POST/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PeBlockerApisuggestionsPOST330BE255"
+    }
+  ]
+}

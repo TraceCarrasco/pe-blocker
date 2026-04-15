@@ -1,0 +1,16 @@
+{
+  "name": "pe-blocker-extension",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "jest-environment-jsdom": "^29.0.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testMatch": ["**/tests/*.test.js"],
+    "setupFiles": ["./tests/setup.js"]
+  }
+}

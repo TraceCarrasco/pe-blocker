@@ -1,0 +1,1256 @@
+{
+ "Description": "PE Blocker — channel suggestion API, WAF, CloudFront, budget guard",
+ "Resources": {
+  "Suggestions2DCFD649": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "submissionId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "platform",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "submittedAt",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "platform-submittedAt-index",
+      "KeySchema": [
+       {
+        "AttributeName": "platform",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "submittedAt",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "submissionId",
+      "KeyType": "HASH"
+     }
+    ],
+    "TableName": "pe-blocker-suggestions"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/Suggestions/Resource"
+   }
+  },
+  "SubmissionsEnabledF46FF627": {
+   "Type": "AWS::SSM::Parameter",
+   "Properties": {
+    "Description": "\"true\" = accepting submissions; \"false\" = budget exceeded, silently dropping",
+    "Name": "/pe-blocker/submissions-enabled",
+    "Type": "String",
+    "Value": "true"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/SubmissionsEnabled/Resource"
+   }
+  },
+  "SubmitSuggestionServiceRole71BA46CF": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/SubmitSuggestion/ServiceRole/Resource"
+   }
+  },
+  "SubmitSuggestionServiceRoleDefaultPolicyE17443DB": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Suggestions2DCFD649",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "Suggestions2DCFD649",
+             "Arn"
+            ]
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "ssm:DescribeParameters",
+        "ssm:GetParameters",
+        "ssm:GetParameter",
+        "ssm:GetParameterHistory"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":ssm:us-east-1:",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":parameter",
+          {
+           "Ref": "SubmissionsEnabledF46FF627"
+          }
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "SubmitSuggestionServiceRoleDefaultPolicyE17443DB",
+    "Roles": [
+     {
+      "Ref": "SubmitSuggestionServiceRole71BA46CF"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/SubmitSuggestion/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "SubmitSuggestion6972A7EF": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+     },
+     "S3Key": "24ac134e6d120288bd25ff4af1b44948f944016b788322f466933ac5598ad441.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "TABLE_NAME": {
+       "Ref": "Suggestions2DCFD649"
+      },
+      "SSM_PARAM": {
+       "Ref": "SubmissionsEnabledF46FF627"
+      }
+     }
+    },
+    "FunctionName": "pe-blocker-submit-suggestion",
+    "Handler": "bootstrap",
+    "Role": {
+     "Fn::GetAtt": [
+      "SubmitSuggestionServiceRole71BA46CF",
+      "Arn"
+     ]
+    },
+    "Runtime": "provided.al2023",
+    "Timeout": 10
+   },
+   "DependsOn": [
+    "SubmitSuggestionServiceRoleDefaultPolicyE17443DB",
+    "SubmitSuggestionServiceRole71BA46CF"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/SubmitSuggestion/Resource",
+    "aws:asset:path": "asset.24ac134e6d120288bd25ff4af1b44948f944016b788322f466933ac5598ad441",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "BudgetEnforcerServiceRole60831680": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/BudgetEnforcer/ServiceRole/Resource"
+   }
+  },
+  "BudgetEnforcerServiceRoleDefaultPolicy3924F396": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "ssm:PutParameter",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":ssm:us-east-1:",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":parameter",
+          {
+           "Ref": "SubmissionsEnabledF46FF627"
+          }
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "BudgetEnforcerServiceRoleDefaultPolicy3924F396",
+    "Roles": [
+     {
+      "Ref": "BudgetEnforcerServiceRole60831680"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/BudgetEnforcer/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "BudgetEnforcerD370D736": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+     },
+     "S3Key": "89c1d4e2369f81d8911b95038f69ba3ed4e322b090a5a9a3f15ba9b6db26f8bf.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "SSM_PARAM": {
+       "Ref": "SubmissionsEnabledF46FF627"
+      }
+     }
+    },
+    "FunctionName": "pe-blocker-budget-enforcer",
+    "Handler": "bootstrap",
+    "Role": {
+     "Fn::GetAtt": [
+      "BudgetEnforcerServiceRole60831680",
+      "Arn"
+     ]
+    },
+    "Runtime": "provided.al2023",
+    "Timeout": 10
+   },
+   "DependsOn": [
+    "BudgetEnforcerServiceRoleDefaultPolicy3924F396",
+    "BudgetEnforcerServiceRole60831680"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/BudgetEnforcer/Resource",
+    "aws:asset:path": "asset.89c1d4e2369f81d8911b95038f69ba3ed4e322b090a5a9a3f15ba9b6db26f8bf",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "BudgetEnforcerAllowInvokePeBlockerStackBudgetAlertTopic4DF2F2CBBC865F08": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "BudgetEnforcerD370D736",
+      "Arn"
+     ]
+    },
+    "Principal": "sns.amazonaws.com",
+    "SourceArn": {
+     "Ref": "BudgetAlertTopicF20DF526"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/BudgetEnforcer/AllowInvoke:PeBlockerStackBudgetAlertTopic4DF2F2CB"
+   }
+  },
+  "BudgetEnforcerBudgetAlertTopicE5749453": {
+   "Type": "AWS::SNS::Subscription",
+   "Properties": {
+    "Endpoint": {
+     "Fn::GetAtt": [
+      "BudgetEnforcerD370D736",
+      "Arn"
+     ]
+    },
+    "Protocol": "lambda",
+    "TopicArn": {
+     "Ref": "BudgetAlertTopicF20DF526"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/BudgetEnforcer/BudgetAlertTopic/Resource"
+   }
+  },
+  "BudgetResetterServiceRole6FF9F4F4": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/BudgetResetter/ServiceRole/Resource"
+   }
+  },
+  "BudgetResetterServiceRoleDefaultPolicy403ECC78": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "ssm:PutParameter",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":ssm:us-east-1:",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":parameter",
+          {
+           "Ref": "SubmissionsEnabledF46FF627"
+          }
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "BudgetResetterServiceRoleDefaultPolicy403ECC78",
+    "Roles": [
+     {
+      "Ref": "BudgetResetterServiceRole6FF9F4F4"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/BudgetResetter/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "BudgetResetterC1BB6208": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+     },
+     "S3Key": "f2584e4925724ec3668b8014edb1b749d3d84189fa121609c44ad7336b81c443.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "SSM_PARAM": {
+       "Ref": "SubmissionsEnabledF46FF627"
+      }
+     }
+    },
+    "FunctionName": "pe-blocker-budget-resetter",
+    "Handler": "bootstrap",
+    "Role": {
+     "Fn::GetAtt": [
+      "BudgetResetterServiceRole6FF9F4F4",
+      "Arn"
+     ]
+    },
+    "Runtime": "provided.al2023",
+    "Timeout": 10
+   },
+   "DependsOn": [
+    "BudgetResetterServiceRoleDefaultPolicy403ECC78",
+    "BudgetResetterServiceRole6FF9F4F4"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/BudgetResetter/Resource",
+    "aws:asset:path": "asset.f2584e4925724ec3668b8014edb1b749d3d84189fa121609c44ad7336b81c443",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "BudgetAlertTopicF20DF526": {
+   "Type": "AWS::SNS::Topic",
+   "Properties": {
+    "TopicName": "pe-blocker-budget-alerts"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/BudgetAlertTopic/Resource"
+   }
+  },
+  "BudgetAlertTopicPolicy3B1AEAD8": {
+   "Type": "AWS::SNS::TopicPolicy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "SNS:Publish",
+       "Condition": {
+        "StringEquals": {
+         "aws:SourceAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "budgets.amazonaws.com"
+       },
+       "Resource": {
+        "Ref": "BudgetAlertTopicF20DF526"
+       },
+       "Sid": "0"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Topics": [
+     {
+      "Ref": "BudgetAlertTopicF20DF526"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/BudgetAlertTopic/Policy/Resource"
+   }
+  },
+  "MonthlyCostBudget": {
+   "Type": "AWS::Budgets::Budget",
+   "Properties": {
+    "Budget": {
+     "BudgetLimit": {
+      "Amount": 20,
+      "Unit": "USD"
+     },
+     "BudgetName": "pe-blocker-monthly",
+     "BudgetType": "COST",
+     "TimeUnit": "MONTHLY"
+    },
+    "NotificationsWithSubscribers": [
+     {
+      "Notification": {
+       "ComparisonOperator": "GREATER_THAN",
+       "NotificationType": "ACTUAL",
+       "Threshold": 100,
+       "ThresholdType": "PERCENTAGE"
+      },
+      "Subscribers": [
+       {
+        "Address": {
+         "Ref": "BudgetAlertTopicF20DF526"
+        },
+        "SubscriptionType": "SNS"
+       }
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/MonthlyCostBudget"
+   }
+  },
+  "SchedulerRole59E73443": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "scheduler.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Description": "Allows EventBridge Scheduler to invoke the budget-resetter Lambda"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/SchedulerRole/Resource"
+   }
+  },
+  "SchedulerRoleDefaultPolicy66F774B8": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "BudgetResetterC1BB6208",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "BudgetResetterC1BB6208",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "SchedulerRoleDefaultPolicy66F774B8",
+    "Roles": [
+     {
+      "Ref": "SchedulerRole59E73443"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/SchedulerRole/DefaultPolicy/Resource"
+   }
+  },
+  "MonthlyBudgetReset": {
+   "Type": "AWS::Scheduler::Schedule",
+   "Properties": {
+    "Description": "Re-enables DynamoDB submissions at the start of each billing cycle",
+    "FlexibleTimeWindow": {
+     "Mode": "OFF"
+    },
+    "Name": "pe-blocker-monthly-budget-reset",
+    "ScheduleExpression": "cron(0 0 1 * ? *)",
+    "ScheduleExpressionTimezone": "UTC",
+    "Target": {
+     "Arn": {
+      "Fn::GetAtt": [
+       "BudgetResetterC1BB6208",
+       "Arn"
+      ]
+     },
+     "Input": "{\"source\":\"monthly-reset\"}",
+     "RoleArn": {
+      "Fn::GetAtt": [
+       "SchedulerRole59E73443",
+       "Arn"
+      ]
+     }
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/MonthlyBudgetReset"
+   }
+  },
+  "PeBlockerApi67B6A54E": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Properties": {
+    "Name": "pe-blocker-api"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/PeBlockerApi/Resource"
+   }
+  },
+  "PeBlockerApiCloudWatchRoleB76C2C1F": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "apigateway.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      ]
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/PeBlockerApi/CloudWatchRole/Resource"
+   }
+  },
+  "PeBlockerApiAccount02EA73F0": {
+   "Type": "AWS::ApiGateway::Account",
+   "Properties": {
+    "CloudWatchRoleArn": {
+     "Fn::GetAtt": [
+      "PeBlockerApiCloudWatchRoleB76C2C1F",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "PeBlockerApi67B6A54E"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/PeBlockerApi/Account"
+   }
+  },
+  "PeBlockerApiDeployment1739BE63fa6e84ff969d5ca6367f861522c1af65": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Properties": {
+    "Description": "Automatically created by the RestApi construct",
+    "RestApiId": {
+     "Ref": "PeBlockerApi67B6A54E"
+    }
+   },
+   "DependsOn": [
+    "PeBlockerApiOPTIONSB35963E0",
+    "PeBlockerApisuggestionsOPTIONS5C357F30",
+    "PeBlockerApisuggestionsPOST330BE255",
+    "PeBlockerApisuggestionsE1229FA4"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/PeBlockerApi/Deployment/Resource",
+    "aws:cdk:do-not-refactor": true
+   }
+  },
+  "PeBlockerApiDeploymentStageprod954D3946": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Properties": {
+    "DeploymentId": {
+     "Ref": "PeBlockerApiDeployment1739BE63fa6e84ff969d5ca6367f861522c1af65"
+    },
+    "RestApiId": {
+     "Ref": "PeBlockerApi67B6A54E"
+    },
+    "StageName": "prod"
+   },
+   "DependsOn": [
+    "PeBlockerApiAccount02EA73F0"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/PeBlockerApi/DeploymentStage.prod/Resource"
+   }
+  },
+  "PeBlockerApiOPTIONSB35963E0": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "PeBlockerApi67B6A54E",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "PeBlockerApi67B6A54E"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/PeBlockerApi/Default/OPTIONS/Resource"
+   }
+  },
+  "PeBlockerApisuggestionsE1229FA4": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "PeBlockerApi67B6A54E",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "suggestions",
+    "RestApiId": {
+     "Ref": "PeBlockerApi67B6A54E"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/PeBlockerApi/Default/suggestions/Resource"
+   }
+  },
+  "PeBlockerApisuggestionsOPTIONS5C357F30": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "PeBlockerApisuggestionsE1229FA4"
+    },
+    "RestApiId": {
+     "Ref": "PeBlockerApi67B6A54E"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/PeBlockerApi/Default/suggestions/OPTIONS/Resource"
+   }
+  },
+  "PeBlockerApisuggestionsPOSTApiPermissionPeBlockerStackPeBlockerApiD086A8ACPOSTsuggestionsF43E3D2F": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "SubmitSuggestion6972A7EF",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "PeBlockerApi67B6A54E"
+       },
+       "/",
+       {
+        "Ref": "PeBlockerApiDeploymentStageprod954D3946"
+       },
+       "/POST/suggestions"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/PeBlockerApi/Default/suggestions/POST/ApiPermission.PeBlockerStackPeBlockerApiD086A8AC.POST..suggestions"
+   }
+  },
+  "PeBlockerApisuggestionsPOSTApiPermissionTestPeBlockerStackPeBlockerApiD086A8ACPOSTsuggestionsD0E7DA3D": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "SubmitSuggestion6972A7EF",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "PeBlockerApi67B6A54E"
+       },
+       "/test-invoke-stage/POST/suggestions"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/PeBlockerApi/Default/suggestions/POST/ApiPermission.Test.PeBlockerStackPeBlockerApiD086A8AC.POST..suggestions"
+   }
+  },
+  "PeBlockerApisuggestionsPOST330BE255": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "SubmitSuggestion6972A7EF",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "PeBlockerApisuggestionsE1229FA4"
+    },
+    "RestApiId": {
+     "Ref": "PeBlockerApi67B6A54E"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/PeBlockerApi/Default/suggestions/POST/Resource"
+   }
+  },
+  "WebAcl": {
+   "Type": "AWS::WAFv2::WebACL",
+   "Properties": {
+    "DefaultAction": {
+     "Allow": {}
+    },
+    "Name": "pe-blocker-waf",
+    "Rules": [
+     {
+      "Action": {
+       "Block": {}
+      },
+      "Name": "RateLimit",
+      "Priority": 1,
+      "Statement": {
+       "RateBasedStatement": {
+        "AggregateKeyType": "IP",
+        "Limit": 100
+       }
+      },
+      "VisibilityConfig": {
+       "CloudWatchMetricsEnabled": true,
+       "MetricName": "RateLimit",
+       "SampledRequestsEnabled": true
+      }
+     },
+     {
+      "Name": "AWSManagedRulesCommonRuleSet",
+      "OverrideAction": {
+       "None": {}
+      },
+      "Priority": 2,
+      "Statement": {
+       "ManagedRuleGroupStatement": {
+        "Name": "AWSManagedRulesCommonRuleSet",
+        "VendorName": "AWS"
+       }
+      },
+      "VisibilityConfig": {
+       "CloudWatchMetricsEnabled": true,
+       "MetricName": "AWSManagedRulesCommonRuleSet",
+       "SampledRequestsEnabled": true
+      }
+     }
+    ],
+    "Scope": "CLOUDFRONT",
+    "VisibilityConfig": {
+     "CloudWatchMetricsEnabled": true,
+     "MetricName": "pe-blocker-waf",
+     "SampledRequestsEnabled": true
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/WebAcl"
+   }
+  },
+  "Distribution830FAC52": {
+   "Type": "AWS::CloudFront::Distribution",
+   "Properties": {
+    "DistributionConfig": {
+     "Comment": "PE Blocker channel suggestion API",
+     "DefaultCacheBehavior": {
+      "AllowedMethods": [
+       "GET",
+       "HEAD",
+       "OPTIONS",
+       "PUT",
+       "PATCH",
+       "POST",
+       "DELETE"
+      ],
+      "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+      "Compress": true,
+      "OriginRequestPolicyId": "b689b0a8-53d0-40ab-baf2-68738e2966ac",
+      "TargetOriginId": "PeBlockerStackDistributionOrigin1FF61AE36",
+      "ViewerProtocolPolicy": "https-only"
+     },
+     "Enabled": true,
+     "HttpVersion": "http2",
+     "IPV6Enabled": true,
+     "Origins": [
+      {
+       "CustomOriginConfig": {
+        "OriginProtocolPolicy": "https-only",
+        "OriginSSLProtocols": [
+         "TLSv1.2"
+        ]
+       },
+       "DomainName": {
+        "Fn::Select": [
+         2,
+         {
+          "Fn::Split": [
+           "/",
+           {
+            "Fn::Join": [
+             "",
+             [
+              "https://",
+              {
+               "Ref": "PeBlockerApi67B6A54E"
+              },
+              ".execute-api.us-east-1.",
+              {
+               "Ref": "AWS::URLSuffix"
+              },
+              "/",
+              {
+               "Ref": "PeBlockerApiDeploymentStageprod954D3946"
+              },
+              "/"
+             ]
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       "Id": "PeBlockerStackDistributionOrigin1FF61AE36",
+       "OriginPath": {
+        "Fn::Join": [
+         "",
+         [
+          "/",
+          {
+           "Fn::Select": [
+            3,
+            {
+             "Fn::Split": [
+              "/",
+              {
+               "Fn::Join": [
+                "",
+                [
+                 "https://",
+                 {
+                  "Ref": "PeBlockerApi67B6A54E"
+                 },
+                 ".execute-api.us-east-1.",
+                 {
+                  "Ref": "AWS::URLSuffix"
+                 },
+                 "/",
+                 {
+                  "Ref": "PeBlockerApiDeploymentStageprod954D3946"
+                 },
+                 "/"
+                ]
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        ]
+       }
+      }
+     ],
+     "WebACLId": {
+      "Fn::GetAtt": [
+       "WebAcl",
+       "Arn"
+      ]
+     }
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/Distribution/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/1WQwW7CMAyGn4V7yFjRpF0LaKdNQy3SjshNTDG0SRUnIFTl3acEGOwSf79t5bddyOJtJmcTOPNU6eO0o0aOtQd1FHDm7agvBnqrGzluoOlQLHcmQxTMfep0ZNo1OOjRo0vlPxFFB32jQY4fwShP1qTyM6/R9cRM1kRB0MuxsleLHNe2I3XJfZmi4PkWmNGzLFMQPJeLoI7oF8Ao2LAc69CwcjTcLf7pjR1I5RUy5Pfh8iSjaIJuk9FyZxYZBas96tChS7n6JgQM1ILHM1zkWCH7cqC8wANLpWwwXqxw6OylR+NT9knVHtq89RUqZBucwrzTF/q91al4o3v1ZpI5ijPsTkWa6webcvkpVGeD3jlrvBxXxN5RE+4XedYxPj7MJ00jkGlT33fwQ/BRGKtRHvjlVBTy9V3OJgcmmrpgPPUoq2v8BS5+4kNHAgAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PeBlockerStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "PeBlockerApiEndpoint4487CB78": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "PeBlockerApi67B6A54E"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "PeBlockerApiDeploymentStageprod954D3946"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "ApiUrl": {
+   "Description": "Paste this value into popup.js as API_URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Fn::GetAtt": [
+        "Distribution830FAC52",
+        "DomainName"
+       ]
+      },
+      "/suggestions"
+     ]
+    ]
+   }
+  },
+  "SuggestionsTableName": {
+   "Description": "DynamoDB table where channel suggestions are stored",
+   "Value": {
+    "Ref": "Suggestions2DCFD649"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
