@@ -36,9 +36,7 @@ function detectByDomain(hostname) {
   if (PE_ENTITIES.domains.has(hostname)) {
     return { status: "warning", ownerInfo: PE_ENTITIES.ownerInfo[hostname] };
   }
-  // Not in our domains list — unknown, not confirmed safe.
-  // The list only covers known PE sites; absence of a match is not a guarantee.
-  return { status: "unknown" };
+  return { status: "safe" };
 }
 
 // ---------------------------------------------------------------------------
@@ -102,9 +100,10 @@ function detectFromYouTubePage(parsed) {
         const dataVideoId =
           ytData?.currentVideoEndpoint?.watchEndpoint?.videoId ?? null;
         // If ytInitialData carries a video ID that doesn't match the current URL,
-        // the data is stale — skip it to avoid false positives/negatives.
+        // the data is stale — the DOM is likely also mid-transition, so return
+        // unknown to let the retry mechanism wait for fresh data.
         if (dataVideoId !== null && dataVideoId !== currentVideoId) {
-          throw new Error("stale");
+          return { status: "unknown" };
         }
       }
 
@@ -116,12 +115,27 @@ function detectFromYouTubePage(parsed) {
         }
         return { status: "safe" };
       }
+      // ytInitialData present but no channel handle found — fall through to DOM.
     }
   } catch (_) {
     // ytInitialData structure can change or is stale; fall through to DOM
   }
 
-  // DOM fallback: owner link rendered under the video
+  // DOM fallback: owner link rendered under the video.
+  //
+  // Before reading the channel link, verify the DOM is actually showing the
+  // current video. YouTube updates the `video-id` attribute on ytd-watch-flexy
+  // early during SPA navigation; if it doesn't match the URL's video ID the
+  // rest of the DOM (including the channel link) is still from the previous
+  // page and must not be trusted.
+  if (currentVideoId) {
+    const watchFlexy = document.querySelector("ytd-watch-flexy");
+    const domVideoId = watchFlexy ? watchFlexy.getAttribute("video-id") : null;
+    if (domVideoId !== null && domVideoId !== currentVideoId) {
+      return { status: "unknown" };
+    }
+  }
+
   let domChannelFound = false;
   const ownerLinks = document.querySelectorAll(
     "ytd-channel-name a, #owner #channel-name a, #upload-info #channel-name a"
@@ -141,9 +155,7 @@ function detectFromYouTubePage(parsed) {
   // DOM has loaded and identified a non-PE channel — confirmed safe.
   if (domChannelFound) return { status: "safe" };
 
-  // Neither ytInitialData nor the DOM had reliable channel info yet
-  // (data is stale or the page hasn't finished rendering).
-  // Signal the caller to retry rather than treating this as safe/warning.
+  // Neither ytInitialData nor the DOM had reliable channel info yet.
   return { status: "unknown" };
 }
 
@@ -183,15 +195,16 @@ if (typeof module !== "undefined") {
 }
 
 // ---------------------------------------------------------------------------
-// Browser-only: SPA navigation tracking and chrome messaging
+// Browser-only: URL change detection and chrome messaging
 // ---------------------------------------------------------------------------
 (function () {
   if (typeof chrome === "undefined") return;
 
-  let lastCheckedUrl = null;
+  let lastSeenUrl = null;
+  // Nonce incremented on every URL change; in-flight retries that carry a
+  // stale nonce are discarded when a newer navigation has already started.
+  let checkNonce = 0;
 
-  // Returns true when the URL is a YouTube watch or shorts page — the only pages
-  // where detectFromYouTubePage can return "unknown" due to data not being ready.
   function isYouTubeWatchPage(url) {
     try {
       const parts = new URL(url).pathname.split("/").filter(Boolean);
@@ -201,25 +214,22 @@ if (typeof module !== "undefined") {
     }
   }
 
-  function checkCurrentPage(retries) {
-    retries = retries || 0;
-    const url = window.location.href;
-    if (url === lastCheckedUrl) return;
+  function runCheck(retries, nonce) {
+    if (nonce !== checkNonce) return;
 
+    const url = window.location.href;
     const result = detectCurrentSite(url);
 
-    // "unknown" on a watch/shorts page means ytInitialData is stale or the DOM
-    // hasn't rendered the channel info yet. Retry with exponential backoff rather
-    // than locking in a potentially wrong result.
+    // On watch/shorts pages ytInitialData or the DOM may not be ready yet —
+    // retry with exponential backoff before committing a result.
     if (result.status === "unknown" && retries < 4 && isYouTubeWatchPage(url)) {
       const delay = [200, 400, 800, 1600][retries];
-      setTimeout(() => checkCurrentPage(retries + 1), delay);
+      setTimeout(() => runCheck(retries + 1, nonce), delay);
       return;
     }
 
-    // Only lock the URL once we have a definitive result, so that any in-flight
-    // retry above can still re-evaluate after the page data finishes loading.
-    lastCheckedUrl = url;
+    if (nonce !== checkNonce) return;
+
     chrome.runtime.sendMessage({
       type: "PAGE_CHECK_RESULT",
       status: result.status,
@@ -227,15 +237,42 @@ if (typeof module !== "undefined") {
     });
   }
 
-  // YouTube fires this on every SPA navigation
+  function onUrlChange() {
+    checkNonce++;
+    // Reset icon immediately so a stale warning never lingers during navigation.
+    chrome.runtime.sendMessage({ type: "PAGE_CHECK_RESULT", status: "unknown", ownerInfo: null });
+    runCheck(0, checkNonce);
+  }
+
+  function checkForUrlChange() {
+    const url = window.location.href;
+    if (url !== lastSeenUrl) {
+      lastSeenUrl = url;
+      onUrlChange();
+    }
+  }
+
+  // YouTube fires this when its SPA navigation finishes (video autoplay, next
+  // button, clicking a recommendation). This is the most reliable signal for
+  // YouTube and fires faster than polling.
   document.addEventListener("yt-navigate-finish", () => {
-    lastCheckedUrl = null;
-    checkCurrentPage();
+    lastSeenUrl = window.location.href; // suppress duplicate from interval
+    onUrlChange();
   });
 
-  // MutationObserver as a belt-and-suspenders fallback for SPA navigations
-  const observer = new MutationObserver(() => checkCurrentPage());
-  observer.observe(document.documentElement, { childList: true, subtree: false });
+  // Catch forward/back navigation driven by history.pushState (YouTube and
+  // other SPAs) and browser back/forward.
+  const _origPushState = history.pushState.bind(history);
+  history.pushState = function (...args) {
+    _origPushState(...args);
+    setTimeout(checkForUrlChange, 0);
+  };
+  window.addEventListener("popstate", checkForUrlChange);
 
-  checkCurrentPage();
+  // Keep a fallback poll for any navigations we didn't intercept above.
+  setInterval(checkForUrlChange, 500);
+
+  // Run immediately on page load without waiting for the first poll tick.
+  lastSeenUrl = window.location.href;
+  onUrlChange();
 })();
