@@ -60,9 +60,10 @@ def eye_polygon(cx: float, cy: float, w: float, h: float, n: int = 64):
 
 def make_default(target: int) -> Image.Image:
     """
-    Dark navy background with two tall eye symbols side-by-side:
-      • Two white lens shapes with a portrait (tall) aspect ratio
-      • Iris + white ring + pupil + highlight shifted down-left in each eye
+    Kilroy Was Here style icon:
+      • Bald head arc peeking above a wall
+      • Two round eyes resting on the wall top
+      • Big curved nose hanging down over the wall
     """
     OVER = 4
     s = target * OVER
@@ -73,61 +74,85 @@ def make_default(target: int) -> Image.Image:
     # Background
     draw.rectangle([(0, 0), (s, s)], fill=BG_DEFAULT)
 
-    # ── Two-eye geometry ──────────────────────────────────────────────────
-    pad = s * 0.06                        # outer horizontal padding
-    gap = s * 0.10                        # gap between the two eyes
-    ew  = (s - 2 * pad - gap) / 2        # width of each eye
-    eh  = ew * 1.55                       # tall aspect ratio
-    cy  = s * 0.52                        # slightly below centre
+    # ── Wall ──────────────────────────────────────────────────────────────
+    wall_y   = int(s * 0.58)
+    draw.rectangle([(0, wall_y), (s - 1, s - 1)], fill=(28, 45, 72, 255))
+    edge_h = max(3, int(s * 0.020))
+    draw.rectangle(
+        [(0, wall_y - edge_h // 2), (s - 1, wall_y + edge_h // 2)],
+        fill=(65, 88, 118, 255),
+    )
 
-    lcx = pad + ew / 2                    # left eye centre x
-    rcx = s - pad - ew / 2               # right eye centre x
+    stroke = max(4, int(s * 0.048))
 
-    # Gaze: down and to the left
-    gaze_dx = -ew * 0.14
-    gaze_dy =  eh * 0.22
+    # ── Eyes — sit right on top of the wall ───────────────────────────────
+    eye_r  = int(s * 0.038)
+    eye_cy = wall_y - eye_r          # bottom of each eye circle touches wall
+    lcx    = int(s * 0.35)
+    rcx    = int(s * 0.65)
 
-    def draw_eye(cx):
-        # White sclera
-        pts = eye_polygon(cx, cy, ew, eh, n=128)
-        draw.polygon(pts, fill=WHITE)
-
-        icx = cx + gaze_dx
-        icy = cy + gaze_dy
-
-        # Iris
-        iris_r = eh * 0.28
+    for ecx in [lcx, rcx]:
         draw.ellipse(
-            [(icx - iris_r, icy - iris_r), (icx + iris_r, icy + iris_r)],
-            fill=BG_DEFAULT,
-        )
-
-        # White ring
-        ring_r = iris_r * 0.77
-        draw.ellipse(
-            [(icx - ring_r, icy - ring_r), (icx + ring_r, icy + ring_r)],
+            [(ecx - eye_r, eye_cy - eye_r), (ecx + eye_r, eye_cy + eye_r)],
             fill=WHITE,
         )
 
-        # Pupil
-        pupil_r = ring_r * 0.58
-        draw.ellipse(
-            [(icx - pupil_r, icy - pupil_r), (icx + pupil_r, icy + pupil_r)],
-            fill=BG_DEFAULT,
+    # ── Head arc — bald dome connecting the outer edges of both eyes ───────
+    head_cx = s // 2
+    head_rx = int(s * 0.30)   # fixed wide head, independent of eye spacing
+    head_ry = int(s * 0.24)
+
+    # PIL arc: angles clockwise from 3 o'clock. 180→360 = left→top→right (top half).
+    draw.arc(
+        [(head_cx - head_rx, eye_cy - head_ry),
+         (head_cx + head_rx, eye_cy + head_ry)],
+        start=180, end=360,
+        fill=WHITE, width=stroke,
+    )
+
+    # ── Nose — big arc hanging below the wall ─────────────────────────────
+    # Arc bounding box centred on wall_y so endpoints land at wall level.
+    # 0→180 = right→bottom→left (bottom half = hangs downward).
+    nose_cx = s // 2
+    nose_rx = int(s * 0.085)
+    nose_ry = int(s * 0.310)
+
+    draw.arc(
+        [(nose_cx - nose_rx, wall_y - nose_ry),
+         (nose_cx + nose_rx, wall_y + nose_ry)],
+        start=0, end=180,
+        fill=WHITE, width=stroke,
+    )
+
+    # ── Hands — fingers gripping the wall, just outside the nose ─────────
+    finger_w   = int(s * 0.033)
+    finger_h   = int(s * 0.082)
+    finger_gap = int(s * 0.010)
+    finger_r   = finger_w // 2
+    n_fingers  = 3
+    hand_w     = n_fingers * finger_w + (n_fingers - 1) * finger_gap
+    margin     = int(s * 0.022)   # gap between nose edge and nearest finger
+
+    fy_top = wall_y - int(finger_h * 0.55)
+    fy_bot = wall_y + int(finger_h * 0.60)
+
+    # Left hand — anchored near the left edge of the frame
+    lh_x = int(s * 0.04)
+    for i in range(n_fingers):
+        fx = lh_x + i * (finger_w + finger_gap)
+        draw.rounded_rectangle(
+            [(fx, fy_top), (fx + finger_w, fy_bot)],
+            radius=finger_r, fill=WHITE,
         )
 
-        # Highlight
-        hl_r  = pupil_r * 0.30
-        hl_ox =  pupil_r * 0.28
-        hl_oy = -pupil_r * 0.28
-        draw.ellipse(
-            [(icx + hl_ox - hl_r, icy + hl_oy - hl_r),
-             (icx + hl_ox + hl_r, icy + hl_oy + hl_r)],
-            fill=WHITE,
+    # Right hand — anchored near the right edge of the frame
+    rh_x = int(s * 0.96) - hand_w
+    for i in range(n_fingers):
+        fx = rh_x + i * (finger_w + finger_gap)
+        draw.rounded_rectangle(
+            [(fx, fy_top), (fx + finger_w, fy_bot)],
+            radius=finger_r, fill=WHITE,
         )
-
-    draw_eye(lcx)
-    draw_eye(rcx)
 
     # ── Downscale with anti-aliasing ──────────────────────────────────────
     img = img.resize((target, target), Image.LANCZOS)
