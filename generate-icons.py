@@ -74,8 +74,8 @@ def make_default(target: int) -> Image.Image:
     draw.rectangle([(0, 0), (s, s)], fill=BG_DEFAULT)
 
     # ── Two-eye (👀) geometry ─────────────────────────────────────────────
-    pad = s * 0.07                       # outer horizontal padding
-    gap = s * 0.07                       # gap between the two eyes
+    pad = s * 0.08                       # outer horizontal padding
+    gap = s * 0.08                       # gap between the two eyes
     ew  = (s - 2 * pad - gap) / 2       # width of each eye
     eh  = ew * 1.20                      # taller than wide (portrait aspect)
     cy  = s / 2                          # vertically centred
@@ -83,16 +83,17 @@ def make_default(target: int) -> Image.Image:
     lcx = pad + ew / 2                   # left eye centre x
     rcx = s - pad - ew / 2              # right eye centre x
 
-    gaze_dy = eh * 0.18                  # shift iris downward for downward gaze
+    # Iris shifts down inside the (centred) white lens — the white stays put,
+    # the dark iris/pupil moves to the bottom half to convey a downward gaze.
+    gaze_dy = eh * 0.30
 
     def draw_eye(cx, cy):
-        # Filled white lens
+        # White lens — centred at (cx, cy), no offset
         pts = eye_polygon(cx, cy, ew, eh, n=128)
         draw.polygon(pts, fill=WHITE)
 
-        # Iris centre shifted down — iris naturally clips the lower lid,
-        # giving the "looking down" effect.
-        icy = cy + gaze_dy
+        # Iris centre shifted downward within the lens
+        icy = cy + gaze_dy -20
 
         # Iris — dark navy circle
         iris_r = eh * 0.44
@@ -110,19 +111,21 @@ def make_default(target: int) -> Image.Image:
 
         # Pupil — dark filled circle
         pupil_r = ring_r * 0.58
+        iris_offset_x = 10
+        iris_offset_y = 5
         draw.ellipse(
-            [(cx - pupil_r, icy - pupil_r), (cx + pupil_r, icy + pupil_r)],
+            [(cx - pupil_r - iris_offset_x, icy - pupil_r - iris_offset_y), (cx + pupil_r - 6, icy + pupil_r + 10)],
             fill=BG_DEFAULT,
         )
 
         # Highlight dot — small white circle offset up-right from pupil centre
         hl_r  = pupil_r * 0.38
-        hl_ox = pupil_r * -0.25
-        hl_oy = pupil_r * -0.40
+        hl_ox = pupil_r * 0.001
+        hl_oy = pupil_r * 0.001
         draw.ellipse(
             [
-                (cx + hl_ox - hl_r, icy - hl_oy - hl_r),
-                (cx + hl_ox + hl_r, icy - hl_oy + hl_r),
+                (cx + hl_ox - hl_r - 10, icy - hl_oy - hl_r+4),
+                (cx + hl_ox + hl_r - 10 , icy - hl_oy + hl_r + 10),
             ],
             fill=WHITE,
         )
