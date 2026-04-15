@@ -215,7 +215,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PeBlockerStack/SubmitSuggestion/Resource",
-    "aws:asset:path": "asset.24ac134e6d120288bd25ff4af1b44948f944016b788322f466933ac5598ad441",
+    "aws:asset:path": "/Users/tracecarrasco/Documents/Projects/pe-blocker/infrastructure/lambda/submit-suggestion",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -332,7 +332,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PeBlockerStack/BudgetEnforcer/Resource",
-    "aws:asset:path": "asset.89c1d4e2369f81d8911b95038f69ba3ed4e322b090a5a9a3f15ba9b6db26f8bf",
+    "aws:asset:path": "/Users/tracecarrasco/Documents/Projects/pe-blocker/infrastructure/lambda/budget-enforcer",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -486,7 +486,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PeBlockerStack/BudgetResetter/Resource",
-    "aws:asset:path": "asset.f2584e4925724ec3668b8014edb1b749d3d84189fa121609c44ad7336b81c443",
+    "aws:asset:path": "/Users/tracecarrasco/Documents/Projects/pe-blocker/infrastructure/lambda/budget-resetter",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
